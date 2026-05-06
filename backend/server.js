@@ -106,18 +106,87 @@ app.post("/validate", async (req, res) => {
 			});
 		}
 
-		const similarityRanking = await rankBySimilarity(userDescription, knowledgeBase);
-
-		let selected = similarityRanking[0]?.product;
+		const validCandidates = knowledgeBase.filter(
+			(product) => isProductValid(product, userPsi, userMaterial).valid,
+		);
 
 		if (productId) {
 			const explicitProduct = knowledgeBase.find((entry) => entry.product_id === productId);
+
 			if (explicitProduct) {
-				selected = explicitProduct;
+				const explicitValidation = isProductValid(explicitProduct, userPsi, userMaterial);
+				const explicitPrice = computePrice(explicitProduct, userPsi);
+
+				if (explicitValidation.valid) {
+					return res.json({
+						is_valid: true,
+						product: explicitProduct.name,
+						product_id: explicitProduct.product_id,
+						estimated_price: explicitPrice,
+						traceability: explicitProduct.manual_excerpt,
+						details: {
+							max_psi: explicitProduct.constraints.max_psi,
+							compatible_materials: explicitProduct.constraints.compatible_materials,
+						},
+					});
+				}
+
+				const suggestedRanking = await rankBySimilarity(userDescription, validCandidates);
+				const closestValid = suggestedRanking[0]?.product;
+
+				return res.json({
+					is_valid: false,
+					product: explicitProduct.name,
+					product_id: explicitProduct.product_id,
+					estimated_price: explicitPrice,
+					traceability: explicitProduct.manual_excerpt,
+					violations: {
+						psi: !explicitValidation.psiValid
+							? `Requested PSI exceeds ${explicitProduct.constraints.max_psi}.`
+							: null,
+						material: !explicitValidation.materialValid
+							? `Material "${userMaterial}" not in ${explicitProduct.constraints.compatible_materials.join(", ")}.`
+							: null,
+					},
+					suggestion: closestValid
+						? {
+								product_id: closestValid.product_id,
+								name: closestValid.name,
+								estimated_price: computePrice(closestValid, userPsi),
+								traceability: closestValid.manual_excerpt,
+							}
+						: {
+								product_id: "general-purpose",
+								name: "General Purpose Pump",
+								reason: "No valid product found for this PSI and material.",
+							},
+				});
 			}
 		}
 
-		if (!selected) {
+		if (validCandidates.length > 0) {
+			const validRanking = await rankBySimilarity(userDescription, validCandidates);
+			const selectedValid = validRanking[0]?.product;
+
+			if (selectedValid) {
+				return res.json({
+					is_valid: true,
+					product: selectedValid.name,
+					product_id: selectedValid.product_id,
+					estimated_price: computePrice(selectedValid, userPsi),
+					traceability: selectedValid.manual_excerpt,
+					details: {
+						max_psi: selectedValid.constraints.max_psi,
+						compatible_materials: selectedValid.constraints.compatible_materials,
+					},
+				});
+			}
+		}
+
+		const similarityRanking = await rankBySimilarity(userDescription, knowledgeBase);
+		const closestOverall = similarityRanking[0]?.product;
+
+		if (!closestOverall) {
 			return res.status(404).json({
 				is_valid: false,
 				error: "No matching product found. Suggesting General Purpose pump.",
@@ -129,67 +198,27 @@ app.post("/validate", async (req, res) => {
 			});
 		}
 
-		const validation = isProductValid(selected, userPsi, userMaterial);
-		const estimatedPrice = computePrice(selected, userPsi);
-
-		if (validation.valid) {
-			return res.json({
-				is_valid: true,
-				product: selected.name,
-				product_id: selected.product_id,
-				estimated_price: estimatedPrice,
-				traceability: selected.manual_excerpt,
-				details: {
-					max_psi: selected.constraints.max_psi,
-					compatible_materials: selected.constraints.compatible_materials,
-				},
-			});
-		}
-
-		const validCandidates = knowledgeBase.filter(
-			(product) => isProductValid(product, userPsi, userMaterial).valid,
-		);
-		const suggestedRanking = await rankBySimilarity(userDescription, validCandidates);
-		const closestValid = suggestedRanking[0]?.product;
-
-		if (!closestValid) {
-			return res.json({
-				is_valid: false,
-				product: selected.name,
-				product_id: selected.product_id,
-				estimated_price: estimatedPrice,
-				traceability: selected.manual_excerpt,
-				violations: {
-					psi: !validation.psiValid ? `Requested PSI exceeds ${selected.constraints.max_psi}.` : null,
-					material: !validation.materialValid
-						? `Material "${userMaterial}" not in ${selected.constraints.compatible_materials.join(", ")}.`
-						: null,
-				},
-				suggestion: {
-					product_id: "general-purpose",
-					name: "General Purpose Pump",
-					reason: "No valid product found for this PSI and material.",
-				},
-			});
-		}
+		const overallValidation = isProductValid(closestOverall, userPsi, userMaterial);
+		const overallPrice = computePrice(closestOverall, userPsi);
 
 		return res.json({
 			is_valid: false,
-			product: selected.name,
-			product_id: selected.product_id,
-			estimated_price: estimatedPrice,
-			traceability: selected.manual_excerpt,
+			product: closestOverall.name,
+			product_id: closestOverall.product_id,
+			estimated_price: overallPrice,
+			traceability: closestOverall.manual_excerpt,
 			violations: {
-				psi: !validation.psiValid ? `Requested PSI exceeds ${selected.constraints.max_psi}.` : null,
-				material: !validation.materialValid
-					? `Material "${userMaterial}" not in ${selected.constraints.compatible_materials.join(", ")}.`
+				psi: !overallValidation.psiValid
+					? `Requested PSI exceeds ${closestOverall.constraints.max_psi}.`
+					: null,
+				material: !overallValidation.materialValid
+					? `Material "${userMaterial}" not in ${closestOverall.constraints.compatible_materials.join(", ")}.`
 					: null,
 			},
 			suggestion: {
-				product_id: closestValid.product_id,
-				name: closestValid.name,
-				estimated_price: computePrice(closestValid, userPsi),
-				traceability: closestValid.manual_excerpt,
+				product_id: "general-purpose",
+				name: "General Purpose Pump",
+				reason: "No valid product found for this PSI and material.",
 			},
 		});
 	} catch (error) {
