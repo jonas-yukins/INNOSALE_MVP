@@ -1,0 +1,41 @@
+[
+  {
+    "product_id": "pump-hp-9000",
+    "name": "HydraClean HP-9000",
+    "constraints": {
+      "max_psi": 9000,
+      "compatible_materials": ["steel", "stainless steel", "alloy"]
+    },
+    "pricing": {
+      "base_price": 18000,
+      "multiplier": 2.4
+    },
+    "manual_excerpt": "HP-9000 is certified for high-pressure industrial steel cleaning up to 9000 PSI and alloy-safe nozzle assemblies."
+  },
+  {
+    "product_id": "pump-mp-5000",
+    "name": "InnoFlow MP-5000",
+    "constraints": {
+      "max_psi": 5000,
+      "compatible_materials": ["steel", "plastic", "coated metal"]
+    },
+    "pricing": {
+      "base_price": 12000,
+      "multiplier": 1.9
+    },
+    "manual_excerpt": "MP-5000 supports mixed-material cleaning lines and remains stable at up to 5000 PSI in continuous operation."
+  },
+  {
+    "product_id": "pump-lp-2500",
+    "name": "EcoWash LP-2500",
+    "constraints": {
+      "max_psi": 2500,
+      "compatible_materials": ["plastic", "composite", "aluminum"]
+    },
+    "pricing": {
+      "base_price": 8000,
+      "multiplier": 1.3
+    },
+    "manual_excerpt": "LP-2500 is designed for lower-pressure maintenance tasks on lightweight materials such as composite and aluminum."
+  }
+]
