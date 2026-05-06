@@ -20,6 +20,14 @@ function App() {
 			: { label: "INVALID", color: "bg-red-500" };
 	}, [response]);
 
+	const noValidMatch = useMemo(() => {
+		if (!response || response.is_valid) {
+			return false;
+		}
+
+		return response?.suggestion?.product_id === "general-purpose";
+	}, [response]);
+
 	const onSubmit = async (event) => {
 		event.preventDefault();
 		setIsLoading(true);
@@ -117,15 +125,27 @@ function App() {
 
 					{response ? (
 						<div className="mt-4 space-y-3 text-sm">
-							<div className="rounded-xl border border-slate-700 bg-slate-950/60 p-3">
-								<p className="text-slate-300">Selected Product</p>
-								<p className="font-medium text-slate-100">{response.product}</p>
-							</div>
-							<div className="rounded-xl border border-slate-700 bg-slate-950/60 p-3">
-								<p className="text-slate-300">Estimated Price</p>
-								<p className="font-medium text-slate-100">${Math.round(response.estimated_price || 0).toLocaleString()}</p>
-							</div>
-							{response.suggestion ? (
+							{noValidMatch ? (
+								<div className="rounded-xl border border-amber-700 bg-amber-950/30 p-3">
+									<p className="font-medium text-amber-100">
+										No valid configuration found. Please adjust inputs and try again.
+									</p>
+								</div>
+							) : (
+								<>
+									<div className="rounded-xl border border-slate-700 bg-slate-950/60 p-3">
+										<p className="text-slate-300">Selected Product</p>
+										<p className="font-medium text-slate-100">{response.product}</p>
+									</div>
+									<div className="rounded-xl border border-slate-700 bg-slate-950/60 p-3">
+										<p className="text-slate-300">Estimated Price</p>
+										<p className="font-medium text-slate-100">
+											${Math.round(response.estimated_price || 0).toLocaleString()}
+										</p>
+									</div>
+								</>
+							)}
+							{response.suggestion && !noValidMatch ? (
 								<div className="rounded-xl border border-indigo-700 bg-indigo-950/30 p-3">
 									<p className="text-indigo-200">Suggested Valid Option</p>
 									<p className="font-medium text-indigo-100">{response.suggestion.name}</p>

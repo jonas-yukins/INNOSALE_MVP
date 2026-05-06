@@ -1,0 +1,76 @@
+InnoSale MVP - How It Works
+===========================
+
+This file explains how the Inference Engine processes a salesperson request.
+
+INPUTS FROM THE UI
+------------------
+The frontend sends a POST request to /validate with:
+- user_description (free text)
+- user_psi (number)
+- user_material (string)
+- optional product_id (string)
+
+
+ENGINE FLOW
+-----------
+1) Rule pre-filter (hard constraints)
+   - For each product in knowledge_base.json:
+     - user_psi must be <= constraints.max_psi
+     - user_material must be in constraints.compatible_materials
+   - Products passing both checks become validCandidates.
+
+2) Semantic ranking (MiniLM)
+   - The backend embeds user_description with all-MiniLM-L6-v2.
+   - It embeds each candidate product manual_excerpt.
+   - It computes cosine similarity and ranks candidates.
+
+3) Product selection
+   - If validCandidates exists:
+     - Select top semantic match from validCandidates.
+     - Return is_valid: true.
+   - If no validCandidates exists:
+     - Rank all products to identify nearest overall context.
+     - Return is_valid: false and suggest "General Purpose Pump".
+
+4) Pricing
+   - Formula:
+     Price = base_price + (user_psi * multiplier)
+
+5) Traceability
+   - The response always includes manual_excerpt text used as evidence.
+   - Frontend shows this in the Traceability panel.
+
+
+EXAMPLE
+------------------------------
+Salesperson request:
+"I need a pump for low-pressure aluminum cleaning"
+PSI: 2000
+Material: aluminum
+
+Knowledge base highlights:
+- HydraClean HP-9000
+  - max_psi: 9000 (passes PSI)
+  - materials: steel/stainless steel/alloy (fails aluminum)
+- EcoWash LP-2500
+  - max_psi: 2500 (passes PSI)
+  - materials include aluminum (passes material)
+
+Result:
+- validCandidates includes EcoWash LP-2500.
+- Semantic ranking inside validCandidates picks EcoWash LP-2500.
+- Gatekeeper returns VALID.
+- Price:
+  8000 + (2000 * 1.3) = 10600
+- Traceability shows LP-2500 manual_excerpt.
+
+
+WHY THIS DESIGN
+---------------
+- "Fake it till you make it" MVP:
+  - No DB, only local JSON knowledge base.
+  - Fast iteration with clear, explainable outputs.
+- Reliable behavior:
+  - Hard rules protect technical validity.
+  - Semantic ranking improves relevance among valid options.
