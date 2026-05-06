@@ -9,7 +9,7 @@ InnoSale is a single-repo MVP that transforms sales planning for complex industr
 - Frontend: React + Tailwind CSS
 - Data store: `knowledge_base.json` (no database)
 
-## Architecture (Fake It Till You Make It)
+## Architecture
 
 - `frontend`: chat-style UI for salesperson input and trust-first output
 - `backend`: rule validation + semantic ranking + pricing
@@ -17,6 +17,16 @@ InnoSale is a single-repo MVP that transforms sales planning for complex industr
 
 This keeps the MVP monolithic and fast to iterate while preserving the core inference behavior.
 
+## AI Tooling Alignment
+
+### Hugging Face
+The MVP uses the `sentence-transformers/all-MiniLM-L6-v2` model, through a JavaScript transformer library, to generate semantic embeddings and match customer requests with product knowledge.
+
+### Cursor AI
+Cursor AI was used as the development assistant to generate and refine the backend integration code, including the API endpoint, validation logic, and JSON data handling.
+
+### Dyad
+Dyad was used/proposed as the frontend prototyping layer. The current frontend follows a Dyad-style interface, with a clean form-based user dialogue for sales engineers.
 ## Core Inference Logic (Task T2.2)
 
 `POST /validate` performs three functions:
